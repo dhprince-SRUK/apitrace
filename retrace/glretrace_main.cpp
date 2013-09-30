@@ -74,6 +74,22 @@ static bool supportsTimestamp = true;
 static bool supportsOcclusion = true;
 static bool supportsDebugOutput = true;
 
+static bool hasGL_ARB_timer_query = false;
+static bool hasGL_EXT_disjoint_timer_query = false;
+static PFNGLGENQUERIESPROC pfnglGenQueries = 0;
+static PFNGLDELETEQUERIESPROC pfnglDeleteQueries = 0;
+static PFNGLBEGINQUERYPROC pfnglBeginQuery = 0;
+static PFNGLENDQUERYPROC pfnglEndQuery = 0;
+static PFNGLQUERYCOUNTERPROC pfnglQueryCounter = 0;
+static PFNGLGETQUERYIVPROC pfnglGetQueryiv = 0;
+static PFNGLGETQUERYOBJECTI64VPROC pfnglGetQueryObjecti64v = 0;
+static PFNGLGENQUERIESEXTPROC pfnglGenQueriesEXT = 0;
+static PFNGLDELETEQUERIESEXTPROC pfnglDeleteQueriesEXT = 0;
+static PFNGLBEGINQUERYEXTPROC pfnglBeginQueryEXT = 0;
+static PFNGLENDQUERYEXTPROC pfnglEndQueryEXT = 0;
+static PFNGLQUERYCOUNTEREXTPROC pfnglQueryCounterEXT = 0;
+static PFNGLGETQUERYIVEXTPROC pfnglGetQueryivEXT = 0;
+static PFNGLGETQUERYOBJECTI64VEXTPROC pfnglGetQueryObjecti64vEXT = 0;
 static std::list<CallQuery> callQueries;
 
 static void APIENTRY
@@ -119,7 +135,7 @@ checkGlError(trace::Call &call) {
             break;
         }
         os << "\n";
-    
+
         error = glGetError();
     }
 }
@@ -163,14 +179,23 @@ completeCallQuery(CallQuery& query) {
     if (query.isDraw) {
         if (retrace::profilingGpuTimes) {
             if (supportsTimestamp) {
-                glGetQueryObjecti64vEXT(query.ids[GPU_START], GL_QUERY_RESULT, &gpuStart);
+                if ( hasGL_ARB_timer_query )
+                   pfnglGetQueryObjecti64v(query.ids[GPU_START], GL_QUERY_RESULT, &gpuStart);
+                else
+                   pfnglGetQueryObjecti64vEXT(query.ids[GPU_START], GL_QUERY_RESULT, &gpuStart);
             }
 
-            glGetQueryObjecti64vEXT(query.ids[GPU_DURATION], GL_QUERY_RESULT, &gpuDuration);
+            if ( hasGL_ARB_timer_query )
+                pfnglGetQueryObjecti64v(query.ids[GPU_DURATION], GL_QUERY_RESULT, &gpuDuration);
+            else
+                pfnglGetQueryObjecti64vEXT(query.ids[GPU_DURATION], GL_QUERY_RESULT, &gpuDuration);
         }
 
         if (retrace::profilingPixelsDrawn) {
-            glGetQueryObjecti64vEXT(query.ids[OCCLUSION], GL_QUERY_RESULT, &pixels);
+            if ( hasGL_ARB_timer_query )
+                pfnglGetQueryObjecti64v(query.ids[OCCLUSION], GL_QUERY_RESULT, &pixels);
+            else
+                pfnglGetQueryObjecti64vEXT(query.ids[OCCLUSION], GL_QUERY_RESULT, &pixels);
         }
 
     } else {
@@ -188,7 +213,10 @@ completeCallQuery(CallQuery& query) {
         rssDuration = query.rssEnd - query.rssStart;
     }
 
-    glDeleteQueries(NUM_QUERIES, query.ids);
+    if ( hasGL_ARB_timer_query )
+        pfnglDeleteQueries(NUM_QUERIES, query.ids);
+    else
+        pfnglDeleteQueriesEXT(NUM_QUERIES, query.ids);
 
     /* Add call to profile */
     retrace::profiler.addCall(query.call, query.sig->name, query.program, pixels, gpuStart, gpuDuration, query.cpuStart, cpuDuration, query.vsizeStart, vsizeDuration, query.rssStart, rssDuration);
@@ -214,20 +242,32 @@ beginProfile(trace::Call &call, bool isDraw) {
     query.sig = call.sig;
     query.program = currentContext ? currentContext->activeProgram : 0;
 
-    glGenQueries(NUM_QUERIES, query.ids);
+    if ( hasGL_ARB_timer_query )
+        pfnglGenQueries(NUM_QUERIES, query.ids);
+    else
+        pfnglGenQueriesEXT(NUM_QUERIES, query.ids);
 
     /* GPU profiling only for draw calls */
     if (isDraw) {
         if (retrace::profilingGpuTimes) {
             if (supportsTimestamp) {
-                glQueryCounter(query.ids[GPU_START], GL_TIMESTAMP);
+                if ( hasGL_ARB_timer_query )
+                    pfnglQueryCounter(query.ids[GPU_START], GL_TIMESTAMP);
+                else
+                    pfnglQueryCounterEXT(query.ids[GPU_START], GL_TIMESTAMP);
             }
 
-            glBeginQuery(GL_TIME_ELAPSED, query.ids[GPU_DURATION]);
+            if ( hasGL_ARB_timer_query )
+                pfnglBeginQuery(GL_TIME_ELAPSED, query.ids[GPU_DURATION]);
+            else
+                pfnglBeginQueryEXT(GL_TIME_ELAPSED, query.ids[GPU_DURATION]);
         }
 
         if (retrace::profilingPixelsDrawn) {
-            glBeginQuery(GL_SAMPLES_PASSED, query.ids[OCCLUSION]);
+            if ( hasGL_ARB_timer_query )
+                pfnglBeginQuery(GL_SAMPLES_PASSED, query.ids[OCCLUSION]);
+            else
+                pfnglBeginQueryEXT(GL_SAMPLES_PASSED, query.ids[OCCLUSION]);
         }
     }
 
@@ -258,11 +298,17 @@ endProfile(trace::Call &call, bool isDraw) {
     /* GPU profiling only for draw calls */
     if (isDraw) {
         if (retrace::profilingGpuTimes) {
-            glEndQuery(GL_TIME_ELAPSED);
+            if ( hasGL_ARB_timer_query )
+                pfnglEndQuery(GL_TIME_ELAPSED);
+            else
+                pfnglEndQueryEXT(GL_TIME_ELAPSED);
         }
 
         if (retrace::profilingPixelsDrawn) {
-            glEndQuery(GL_SAMPLES_PASSED);
+            if ( hasGL_ARB_timer_query )
+                pfnglEndQuery(GL_SAMPLES_PASSED);
+            else
+                pfnglEndQueryEXT(GL_SAMPLES_PASSED);
         }
     }
 
@@ -279,22 +325,53 @@ initContext() {
 
     /* Ensure we have adequate extension support */
     assert(currentContext);
-    supportsTimestamp   = currentContext->hasExtension("GL_ARB_timer_query");
-    supportsElapsed     = currentContext->hasExtension("GL_EXT_timer_query") || supportsTimestamp;
+
+    hasGL_ARB_timer_query = currentContext->hasExtension("GL_ARB_timer_query");
+    hasGL_EXT_disjoint_timer_query = currentContext->hasExtension("GL_EXT_disjoint_timer_query");
+
+    supportsTimestamp   = hasGL_ARB_timer_query || hasGL_EXT_disjoint_timer_query;
+    supportsElapsed     = currentContext->hasExtension("GL_EXT_timer_query")
+                          || supportsTimestamp;
     supportsOcclusion   = currentContext->hasExtension("GL_ARB_occlusion_query");
     supportsDebugOutput = currentContext->hasExtension("GL_ARB_debug_output");
     supportsARBShaderObjects = currentContext->hasExtension("GL_ARB_shader_objects");
 
+    if ( hasGL_ARB_timer_query )
+    {
+        pfnglGenQueries = &glGenQueries;
+        pfnglDeleteQueries = &glDeleteQueries;
+        pfnglBeginQuery = &glBeginQuery;
+        pfnglEndQuery = &glEndQuery;
+        pfnglQueryCounter = &glQueryCounter;
+        pfnglGetQueryiv = &glGetQueryiv;
+        pfnglGetQueryObjecti64v = &glGetQueryObjecti64v;
+    }
+    if ( hasGL_EXT_disjoint_timer_query )
+    {
+        pfnglGenQueriesEXT = &glGenQueriesEXT;
+        pfnglDeleteQueriesEXT = &glDeleteQueriesEXT;
+        pfnglBeginQueryEXT = &glBeginQueryEXT;
+        pfnglEndQueryEXT = &glEndQueryEXT;
+        pfnglQueryCounterEXT = &glQueryCounterEXT;
+        pfnglGetQueryivEXT = &glGetQueryivEXT;
+        pfnglGetQueryObjecti64vEXT = &glGetQueryObjecti64vEXT;
+    }
     /* Check for timer query support */
     if (retrace::profilingGpuTimes) {
         if (!supportsTimestamp && !supportsElapsed) {
-            std::cout << "Error: Cannot run profile, GL_EXT_timer_query extension is not supported." << std::endl;
+            std::cout << "Error: Cannot run profile, GL_EXT_timer_query/GL_EXT_disjoint_timer_query extension is not supported." << std::endl;
             exit(-1);
         }
 
         GLint bits = 0;
-        glGetQueryiv(GL_TIME_ELAPSED, GL_QUERY_COUNTER_BITS, &bits);
-
+        if ( hasGL_ARB_timer_query )
+        {
+            pfnglGetQueryiv(GL_TIME_ELAPSED, GL_QUERY_COUNTER_BITS, &bits);
+        }
+        else
+        {
+            pfnglGetQueryivEXT(GL_TIME_ELAPSED_EXT, GL_QUERY_COUNTER_BITS_EXT, &bits);
+        }
         if (!bits) {
             std::cout << "Error: Cannot run profile, GL_QUERY_COUNTER_BITS == 0." << std::endl;
             exit(-1);

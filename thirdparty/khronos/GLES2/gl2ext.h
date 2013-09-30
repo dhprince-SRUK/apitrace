@@ -337,6 +337,15 @@ typedef void* GLeglImageOES;
 /* GL_EXT_multi_draw_arrays */
 /* No new tokens introduced by this extension. */
 
+#ifndef GL_EXT_disjoint_timer_query
+#define GL_QUERY_COUNTER_BITS_EXT                               0x8864
+#define GL_CURRENT_QUERY_EXT                                    0x8865
+#define GL_QUERY_RESULT_EXT                                     0x8866
+#define GL_QUERY_RESULT_AVAILABLE_EXT                           0x8867
+#define GL_TIME_ELAPSED_EXT                                     0x88BF
+#define GL_TIMESTAMP_EXT                                        0x8E28
+#define GL_GPU_DISJOINT_EXT                                     0x8FBB
+#endif
 /* GL_EXT_occlusion_query_boolean */
 #ifndef GL_EXT_occlusion_query_boolean
 #define GL_ANY_SAMPLES_PASSED_EXT                               0x8C2F
@@ -1124,6 +1133,33 @@ typedef void (GL_APIENTRYP PFNGLGETQUERYIVEXTPROC) (GLenum target, GLenum pname,
 typedef void (GL_APIENTRYP PFNGLGETQUERYOBJECTUIVEXTPROC) (GLuint id, GLenum pname, GLuint *params);
 #endif
 
+#ifndef GL_EXT_disjoint_timer_query
+#define GL_EXT_disjoint_timer_query 1
+#ifdef GL_GLEXT_PROTOTYPES
+GL_APICALL void GL_APIENTRY glGenQueriesEXT (GLsizei n, GLuint *ids);
+GL_APICALL void GL_APIENTRY glDeleteQueriesEXT (GLsizei n, const GLuint *ids);
+GL_APICALL GLboolean GL_APIENTRY glIsQueryEXT (GLuint id);
+GL_APICALL void GL_APIENTRY glBeginQueryEXT (GLenum target, GLuint id);
+GL_APICALL void GL_APIENTRY glEndQueryEXT (GLenum target);
+GL_APICALL void GL_APIENTRY glQueryCounterEXT (GLuint id, GLenum target);
+GL_APICALL void GL_APIENTRY glGetQueryivEXT (GLenum target, GLenum pname, GLint *params);
+GL_APICALL void GL_APIENTRY glGetQueryObjectivEXT (GLuint id, GLenum pname, GLint *params);
+GL_APICALL void GL_APIENTRY glGetQueryObjectuivEXT (GLuint id, GLenum pname, GLuint *params);
+GL_APICALL void GL_APIENTRY glGetQueryObjecti64vEXT (GLuint id, GLenum pname, GLint64EXT *params);
+GL_APICALL void GL_APIENTRY glGetQueryObjectui64vEXT (GLuint id, GLenum pname, GLuint64EXT *params);
+#endif
+typedef void (GL_APIENTRYP PFNGLGENQUERIESEXTPROC) (GLsizei n, GLuint *ids);
+typedef void (GL_APIENTRYP PFNGLDELETEQUERIESEXTPROC) (GLsizei n, const GLuint *ids);
+typedef GLboolean (GL_APIENTRYP PFNGLISQUERYEXTPROC) (GLuint id);
+typedef void (GL_APIENTRYP PFNGLBEGINQUERYEXTPROC) (GLenum target, GLuint id);
+typedef void (GL_APIENTRYP PFNGLENDQUERYEXTPROC) (GLenum target);
+typedef void (GL_APIENTRYP PFNGLQUERYCOUNTEREXTPROC) (GLuint id, GLenum target);
+typedef void (GL_APIENTRYP PFNGLGETQUERYIVEXTPROC) (GLenum target, GLenum pname, GLint *params);
+typedef void (GL_APIENTRYP PFNGLGETQUERYOBJECTIVEXTPROC) (GLuint id, GLenum pname, GLint *params);
+typedef void (GL_APIENTRYP PFNGLGETQUERYOBJECTUIVEXTPROC) (GLuint id, GLenum pname, GLuint *params);
+typedef void (GL_APIENTRYP PFNGLGETQUERYOBJECTI64VEXTPROC) (GLuint id, GLenum pname, GLint64EXT *params);
+typedef void (GL_APIENTRYP PFNGLGETQUERYOBJECTUI64VEXTPROC) (GLuint id, GLenum pname, GLuint64EXT *params);
+#endif /* GL_EXT_disjoint_timer_query */
 /* GL_EXT_read_format_bgra */
 #ifndef GL_EXT_read_format_bgra
 #define GL_EXT_read_format_bgra 1
