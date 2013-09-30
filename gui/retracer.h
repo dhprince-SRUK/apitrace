@@ -22,6 +22,8 @@ public:
 
     QString remoteTarget() const;
     void setRemoteTarget(const QString &host);
+    QString remoteEnv() const;
+    void setRemoteEnv(const QString &env);
 
     void setAPI(trace::API api);
 
@@ -63,6 +65,7 @@ protected:
 private:
     QString m_fileName;
     QString m_remoteTarget;
+	QString m_remoteEnv;
     trace::API m_api;
     bool m_benchmarking;
     bool m_doubleBuffered;

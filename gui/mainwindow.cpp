@@ -114,6 +114,10 @@ void MainWindow::setRemoteTarget(const QString &host)
     m_retracer->setRemoteTarget(host);
 }
 
+void MainWindow::setRemoteEnv(const QString &env)
+{
+    m_retracer->setRemoteEnv(env);
+}
 void MainWindow::callItemSelected(const QModelIndex &index)
 {
     ApiTraceEvent *event =

@@ -25,7 +25,10 @@ static void usage(void)
     qWarning("usage: qapitrace [options] [TRACE] [CALLNO]\n"
              "Valid options include:\n"
              "    -h, --help            Print this help message\n"
-             "    --remote-target HOST  Replay trace on remote target HOST\n");
+             "    --remote-target HOST  Replay trace on remote target HOST\n"
+             "                          --remote-target root@192.168.x.y\n"
+             "    --remote-env ENVVAR   Environment variables to send to remote target HOST\n"
+             "                          e.g. --remote-env 'DISPLAY=\":0.0\" LD_LIBRARY_PATH=\"/usr/lib\"'\n");
 }
 
 int main(int argc, char **argv)
@@ -51,6 +54,7 @@ int main(int argc, char **argv)
 
     QStringList args = app.arguments();
     QString remoteTarget;
+    QString remoteEnv;
 
     int i = 1;
     while (i < args.count()) {
@@ -59,6 +63,7 @@ int main(int argc, char **argv)
             break;
         }
         ++i;
+//        qDebug("arg[%d]=%s", i, argv[i]);
         if (arg == QLatin1String("--")) {
             break;
         } else if (arg == QLatin1String("--remote-target")) {
@@ -67,6 +72,13 @@ int main(int argc, char **argv)
                 exit(1);
             }
             remoteTarget = args[i];
+            ++i;
+        } else if (arg == QLatin1String("--remote-env")) {
+            if (i == args.count()) {
+                qWarning("Option --remote-env requires an argument.\ne.g. \'DISPLAY=\"0:.0\" LD_PRELOAD=\"path-to-some-lib.so\"\'");
+                exit(1);
+            }
+            remoteEnv = args[i];
             ++i;
         } else if (arg == QLatin1String("-h") ||
                    arg == QLatin1String("--help")) {
@@ -95,5 +107,8 @@ int main(int argc, char **argv)
         window.setRemoteTarget(remoteTarget);
     }
 
+    if (remoteEnv.length()) {
+        window.setRemoteEnv(remoteEnv);
+    }
     app.exec();
 }

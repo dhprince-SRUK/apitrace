@@ -160,6 +160,14 @@ void Retracer::setRemoteTarget(const QString &host)
     m_remoteTarget = host;
 }
 
+QString Retracer::remoteEnv() const
+{
+    return m_remoteEnv;
+}
+void Retracer::setRemoteEnv(const QString &env)
+{
+    m_remoteEnv = env;
+}
 void Retracer::setAPI(trace::API api)
 {
     m_api = api;
@@ -334,8 +342,11 @@ void Retracer::run()
 
     if (m_remoteTarget.length() != 0) {
         arguments.prepend(prog);
+        arguments.prepend(m_remoteEnv);
         arguments.prepend(m_remoteTarget);
         prog = QLatin1String("ssh");
+        qDebug() << prog;
+        qDebug() << arguments;
     }
 
     /*
